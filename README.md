@@ -1,43 +1,55 @@
-<img src="https://github.com/user-attachments/assets/e3a74da4-8c2f-4b6f-923d-48b2cea1c407" width="100%" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+# Helium Dither New Tab
 
-# Disclosure & Attribution
-I am not affiliated with Helium or Imput. This project was originally created for my personal use — I'm sharing it here for anyone to enjoy.
-- All references to "Helium" belong to Imput/Helium.
-- All rights are reserved to Imput/Helium; you can support their work at [helium.computer/sponsor](https://helium.computer/sponsor).
-- I am not part of Imput/Helium, nor am I affiliated with them.
+A dark, local new-tab page for [Helium](https://helium.computer/) with Aura's
+animated blue-noise photo treatment. It includes a clock, address/search box,
+shortcuts, and an on-device wallpaper picker.
 
----
+This is an unofficial fork of
+[`mlemlabs/custom-helium-start`](https://github.com/mlemlabs/custom-helium-start).
+It replaces the original dashboard implementation with a dependency-free
+WebGL2 renderer modeled on Aura's animated photo shader.
 
-## Usage & Hosting
-You can open `index.html` directly in your browser.
+## Features
 
-### Integration with Helium
+- Aura-style four-step color dithering and moving blue-noise threshold
+- Dissolving half-wallpaper fade over a black background
+- The same bundled waterfall used by the reference Aura setup
+- Local image selection; chosen images never leave the browser
+- 15 FPS animation that pauses while the page is hidden
+- Reduced-motion support
+- No build step and no runtime dependencies
 
-**Step 1 — Enable the custom new tab flag**
+## Install in Helium
 
-Navigate to:
-`helium://flags/#custom-ntp`
+1. Download or clone this repository.
+2. Open `helium://flags/#custom-ntp`.
+3. Enable **Custom New Tab Page** and set its value to the absolute file URL
+   for `index.html`, for example:
 
-> Allows setting a custom URL for the new tab page. Value can be internal (e.g. `about:blank` or `chrome://new-tab-page`), external (e.g. `example.com`), or local (e.g. `file:///tmp/startpage.html`). Applies in incognito too. *ungoogled-chromium — Mac, Windows, Linux*
+   ```text
+   file:///Users/you/Hacks/custom-helium-start/index.html
+   ```
 
-Enable the flag, then set the value to your `index.html` path or hosted URL.
+4. Open `helium://settings/onStartup` and select **Open the New Tab page**.
+5. Open a new tab.
 
-**Step 2 — Set startup to open a new tab**
+Use the palette button in the lower-right corner to select a different image
+or return to a plain dark background. Images are resized and stored in that
+page's local browser storage.
 
-Navigate to:
-helium://settings/onStartup
+## Search and shortcuts
 
-Select **"Open the new tab page"** — Helium will automatically load your custom new tab from Step 1.
+The search box uses Google by default. Change `SEARCH_URL` in `app.js` to use a
+different search engine. Shortcut destinations are plain links in `index.html`.
 
-**Step 3 — Customize your dashboard**
+The page performs no background network requests. A network request occurs
+only when you submit a search or open a shortcut.
 
-Open `assets/js/config.js` in any text editor to change your search engine, colors, and custom `!bang` shortcuts — no need to touch the core code.
+## Attribution
 
-All search history and settings are stored locally in your browser's `localStorage`.
+This project is not affiliated with Helium or Imput. Helium names and marks
+belong to their respective owners.
 
----
-
-## Getting Started
-For the best experience with no setup, download the latest release from the GitHub releases page.
-
-To customize the source, open `assets/js/config.js` in a text editor — everything you'd want to change is in there.
+The original start-page project is MIT-licensed. The animated photo shader is
+based on Aura and Paper Shaders. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
+and the included `licenses/` directory for provenance and license texts.
