@@ -36,8 +36,8 @@ body {
 }
 
 #dither-background {
-  image-rendering: pixelated;
-  opacity: 0.68;
+  image-rendering: auto;
+  opacity: 0.76;
 }
 
 .ambient-scrim {

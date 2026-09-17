@@ -25,7 +25,7 @@
   `;
 
   const fragmentSource = `#version 300 es
-    precision mediump float;
+    precision highp float;
     uniform float u_time;
     uniform bool u_halfWallpaper;
     uniform vec2 u_resolution;
@@ -33,6 +33,8 @@
     uniform sampler2D u_image;
     uniform sampler2D u_blueNoise;
     uniform float u_imageAspectRatio;
+    uniform vec2 u_noiseSeed;
+    uniform vec2 u_noiseRotation;
     out vec4 fragColor;
 
     float getUvFrame(vec2 uv, vec2 pad) {
@@ -56,31 +58,73 @@
     }
 
     void main() {
-      float pxSize = 2.0 * u_pixelRatio;
-      vec2 pxSizeUV = gl_FragCoord.xy - 0.5 * u_resolution;
-      pxSizeUV /= pxSize;
-      vec2 canvasPixelizedUV = (floor(pxSizeUV) + 0.5) * pxSize;
-      vec2 normalizedUV = canvasPixelizedUV / u_resolution;
+      // Keep the photograph continuous and quantize only the tone. Previously
+      // the whole canvas was enlarged from a 40% buffer, which made the image
+      // look low-resolution before the dither was even applied.
+      vec2 centeredPixel = gl_FragCoord.xy - 0.5 * u_resolution;
+      vec2 normalizedUV = centeredPixel / u_resolution;
       vec2 imageUV = getImageUV(normalizedUV);
       vec4 image = texture(u_image, imageUV);
-      float frame = getUvFrame(imageUV, pxSize / u_resolution);
+      float frame = getUvFrame(imageUV, 1.5 / u_resolution);
       float lum = dot(vec3(0.2126, 0.7152, 0.0722), image.rgb);
 
       float auraWaveX = sin(u_time * 1.4 + normalizedUV.x * 12.0 + sin(normalizedUV.y * 9.0));
       float auraWaveY = sin(u_time * 1.1 - normalizedUV.y * 10.0 + sin(normalizedUV.x * 7.0));
       float auraWave = (auraWaveX + auraWaveY * 0.45) * 0.07;
-      vec2 auraWarp = vec2(auraWaveX, auraWaveY) * 2.5;
-      float dithering = texture(u_blueNoise, (pxSizeUV + auraWarp + 0.5) / 64.0).r;
 
-      float colorSteps = 4.0;
+      // Keep the original softly interpolated noise motion independent of the
+      // sharper photograph underneath it.
+      float grainSize = max(1.0, 2.0 * u_pixelRatio);
+      vec2 grainPixel = centeredPixel / grainSize;
+      vec2 auraWarp = vec2(auraWaveX, auraWaveY) * 2.5;
+      vec2 noiseUV = (grainPixel + auraWarp + u_noiseSeed * 64.0) / 64.0;
+      mat2 noiseRotation = mat2(
+        u_noiseRotation.x, -u_noiseRotation.y,
+        u_noiseRotation.y, u_noiseRotation.x
+      );
+      float noiseA = texture(u_blueNoise, noiseUV).r;
+      float noiseB = texture(
+        u_blueNoise,
+        noiseRotation * noiseUV * 0.63 + u_noiseSeed.yx * 3.7
+      ).r;
+      float scaleField = 0.5 + 0.5 * sin(
+        normalizedUV.x * 5.2 +
+        sin(normalizedUV.y * 4.1 + u_noiseSeed.y * 6.2831853)
+      );
+      scaleField = smoothstep(0.12, 0.88, scaleField);
+      float noiseMix = mix(0.08, 0.34, scaleField);
+      float dithering = clamp((mix(noiseA, noiseB, noiseMix) - 0.5) * 1.16 + 0.5, 0.0, 1.0);
+
+      float colorSteps = 7.0;
       dithering -= 0.5;
-      float brightness = clamp(lum + dithering / colorSteps + auraWave, 0.0, 1.0);
+      float brightness = clamp(lum + dithering / colorSteps * 0.82 + auraWave, 0.0, 1.0);
       brightness = mix(0.0, brightness, frame);
       brightness = mix(0.0, brightness, image.a);
       float quantLum = floor(brightness * colorSteps + 0.5) / colorSteps;
       quantLum = mix(0.0, quantLum, frame);
       vec3 normColor = image.rgb / max(lum, 0.001);
-      vec3 color = normColor * quantLum;
+      vec3 color = normColor * mix(brightness, quantLum, 0.82);
+
+      // Two broad, slowly drifting light fields add atmosphere for roughly the
+      // cost of a few dot products. No blur pass, extra texture, or DOM layer.
+      vec2 fieldUV = normalizedUV + 0.5;
+      vec2 lightA = vec2(
+        0.27 + sin(u_time * 0.11) * 0.07,
+        0.70 + cos(u_time * 0.09) * 0.05
+      );
+      vec2 lightB = vec2(
+        0.76 + cos(u_time * 0.08) * 0.06,
+        0.42 + sin(u_time * 0.07) * 0.07
+      );
+      float glowA = exp(-dot(fieldUV - lightA, fieldUV - lightA) * 4.2);
+      float glowB = exp(-dot(fieldUV - lightB, fieldUV - lightB) * 5.5);
+      color *= 0.88 + glowA * 0.17 + glowB * 0.10;
+      color += vec3(0.025, 0.035, 0.065) * glowA * (0.3 + brightness);
+      color += vec3(0.055, 0.025, 0.018) * glowB * (0.2 + brightness) * 0.45;
+
+      vec2 vignetteUV = fieldUV * (1.0 - fieldUV.yx);
+      float vignette = pow(clamp(vignetteUV.x * vignetteUV.y * 18.0, 0.0, 1.0), 0.22);
+      color *= mix(0.58, 1.0, vignette);
       float quantAlpha = floor(image.a * colorSteps + 0.5) / colorSteps;
       float opacity = mix(quantLum, 1.0, quantAlpha);
 
@@ -90,6 +134,16 @@
         float auraDissolve = smoothstep(dithering + 0.38, dithering + 0.62, auraFade);
         color *= auraDissolve;
         opacity *= auraDissolve;
+
+        // Let occasional grains catch light at the translucent boundary. The
+        // edge mask peaks halfway through the dissolve and disappears on both
+        // fully solid and fully transparent areas.
+        float dissolveEdge = 4.0 * auraDissolve * (1.0 - auraDissolve);
+        float edgeGrain = smoothstep(0.56, 0.90, noiseB);
+        vec3 coolRim = vec3(0.18, 0.28, 0.48);
+        vec3 warmRim = vec3(0.46, 0.24, 0.16);
+        vec3 rimColor = mix(coolRim, warmRim, u_noiseSeed.x * 0.32);
+        color += rimColor * dissolveEdge * edgeGrain * auraDissolve * 0.16;
       }
       fragColor = vec4(color, opacity);
     }
@@ -131,7 +185,8 @@
 
   const uniforms = Object.fromEntries([
     "u_time", "u_halfWallpaper", "u_resolution", "u_pixelRatio",
-    "u_image", "u_blueNoise", "u_imageAspectRatio",
+    "u_image", "u_blueNoise", "u_imageAspectRatio", "u_noiseSeed",
+    "u_noiseRotation",
   ].map((name) => [name, gl.getUniformLocation(program, name)]));
 
   const createBlueNoise = () => {
@@ -194,6 +249,8 @@
 
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   let imageAspectRatio = 1;
+  let noiseSeed = [Math.random(), Math.random()];
+  let noiseRotation = [1, 0];
   let hasImage = false;
   let frameRequest = 0;
   let lastRender = null;
@@ -202,7 +259,10 @@
 
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
-    const scale = Math.min(2 / 5, Math.sqrt(2073600 / Math.max(1, rect.width * rect.height)));
+    // A ~1.45 MP ceiling is sharp at desktop sizes while remaining comfortably
+    // below a native Retina framebuffer. Animation is still capped at 15 fps.
+    const pixelBudget = 1450000;
+    const scale = Math.min(1, Math.sqrt(pixelBudget / Math.max(1, rect.width * rect.height)));
     const width = Math.max(1, Math.round(rect.width * scale));
     const height = Math.max(1, Math.round(rect.height * scale));
     if (canvas.width !== width || canvas.height !== height) {
@@ -223,6 +283,8 @@
     gl.uniform2f(uniforms.u_resolution, canvas.width, canvas.height);
     gl.uniform1f(uniforms.u_pixelRatio, canvas.width / cssWidth);
     gl.uniform1f(uniforms.u_imageAspectRatio, imageAspectRatio);
+    gl.uniform2f(uniforms.u_noiseSeed, noiseSeed[0], noiseSeed[1]);
+    gl.uniform2f(uniforms.u_noiseRotation, noiseRotation[0], noiseRotation[1]);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   };
 
@@ -259,6 +321,9 @@
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
       imageAspectRatio = image.naturalWidth / image.naturalHeight;
+      noiseSeed = [Math.random(), Math.random()];
+      const noiseAngle = noiseSeed[0] * Math.PI * 2;
+      noiseRotation = [Math.cos(noiseAngle), Math.sin(noiseAngle)];
       hasImage = true;
       document.documentElement.dataset.wallpaper = "loaded";
       draw();
