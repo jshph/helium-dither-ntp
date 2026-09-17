@@ -10,7 +10,7 @@ clock, search, and your favorite sites close at hand.
 
 - A subtle animated wallpaper that fades cleanly into black
 - A clock, date, search box, and quick links
-- A built-in image picker—no code required
+- A rotating set of configured wallpapers plus a built-in image picker
 - Private, local customization: your selected image stays in your browser
 - Smooth, battery-conscious animation that pauses when the tab is hidden
 - No installation scripts, accounts, dependencies, or build step
@@ -37,6 +37,16 @@ clock, search, and your favorite sites close at hand.
 Click the palette button in the lower-right corner to choose a wallpaper. The
 page resizes and saves it locally, so nothing is uploaded. You can return to a
 plain dark background at any time.
+
+Choose a folder to replace the built-in rotation with all supported images in
+that folder. They are resized and stored locally in the browser, so the rotation
+continues across new tabs without retaining access to the original folder.
+
+The default wallpaper pool is listed in `config.js`. Add images to the project
+and list their relative paths there to include them in the rotation. One is
+selected at random for each new tab unless a custom image or the dark background
+has been selected. The faint arrow in the lower-right cycles through the full
+pool in a new random order without repeats.
 
 Want different quick links? Edit the links in `index.html`. The search box uses
 Google by default; change `SEARCH_URL` in `app.js` to use another search engine.

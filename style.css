@@ -194,10 +194,10 @@ kbd {
   color: var(--ink);
 }
 
-.appearance-button {
+.appearance-button,
+.next-wallpaper {
   position: fixed;
   z-index: 3;
-  right: 22px;
   bottom: 20px;
   display: grid;
   width: 42px;
@@ -212,13 +212,34 @@ kbd {
   backdrop-filter: blur(22px);
 }
 
+.appearance-button {
+  right: 22px;
+}
+
+.next-wallpaper {
+  right: 72px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0.28;
+  transition: opacity 150ms ease, background 150ms ease;
+}
+
 .appearance-button:hover,
 .appearance-button[aria-expanded="true"] {
   color: var(--ink);
   background: var(--surface-strong);
 }
 
-.appearance-button svg {
+.next-wallpaper:hover,
+.next-wallpaper:focus-visible {
+  outline: none;
+  background: var(--surface);
+  opacity: 1;
+}
+
+.appearance-button svg,
+.next-wallpaper svg {
   width: 19px;
   height: 19px;
   fill: none;
