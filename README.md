@@ -1,18 +1,24 @@
-# A more atmospheric new tab for Helium
+# Animated dither wallpapers for Helium's new tab page
 
-Turn every new tab into a quiet, animated dashboard. Pick any photo and this
-page gives it a dark, shifting dither effect inspired by Aura—while keeping the
-clock, search, and your favorite sites close at hand.
+Turn any photo into a dark, gently moving new-tab background. Fine-grained
+dithering preserves the image underneath, slow light fields keep it from feeling
+static, and a shifting dissolve blends it into black so the clock and search stay
+easy to read.
 
 ![Helium Dither New Tab in action](assets/demo.gif)
 
-## What you get
+## What it does
 
-- A subtle animated wallpaper that fades cleanly into black
+- Applies animated blue-noise dithering without making the source photo look
+  needlessly low-resolution
+- Moves the texture, lighting, and lower-edge dissolve slowly enough to work as
+  a background rather than demand attention
+- Fades the photograph into black behind the controls, keeping them legible
 - A clock, date, search box, and quick links
-- A rotating set of configured wallpapers plus a built-in image picker
-- Private, local customization: your selected image stays in your browser
-- Smooth, battery-conscious animation that pauses when the tab is hidden
+- A built-in image picker and shuffled rotation for an entire folder of photos
+- Private, local customization: selected images never leave your browser
+- Battery-conscious rendering capped at 15 fps, paused when the tab is hidden,
+  and frozen when reduced motion is enabled
 - No installation scripts, accounts, dependencies, or build step
 
 ## Install it in Helium
@@ -63,6 +69,7 @@ This is an unofficial fork of
 rebuilt around a lightweight WebGL2 dither effect. It is not affiliated with
 Helium or Imput.
 
-The original start page is MIT-licensed. The animated photo treatment is based
-on Aura and Paper Shaders. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
-and `licenses/` for complete provenance and license texts.
+The original start page is MIT-licensed. The shader is a standalone browser port
+of open-source work from Aura and Paper Shaders. See
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and `licenses/` for complete
+provenance and license texts.
